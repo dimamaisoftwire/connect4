@@ -12,13 +12,19 @@
 Help! I've worked on this project for a while but cannot get it fully working.
 
 1. Fix Grid so users can input into the connect 4 game
-1. Fix win-condition
-1. Fix new game button
+1. Fix win & drawing conditions
+1. Allow games to reset
 1. 
 
-- Hooks can be used, but there isn't necessarily the need, but worth understanding: `useMemo` / `useCallback`.
+1. Game controller tests
+
+1. Enhance stats page with move count numbers, and average
+
+### Extension tasks
+
+- Variable sizing
 - Deploy it to Vercel
-- Use Redis to play against each other
+- Use Redis to play against each other?
 
 ## Dev help
 

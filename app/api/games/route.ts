@@ -8,8 +8,7 @@ export async function POST(request: NextRequest) {
 
     if (
       body.winner === undefined ||
-      body.loser === undefined ||
-      !body.moveCount
+      body.loser === undefined
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.DATABASE_URL) {
       return NextResponse.json(
-        { error: "Database not configured. See SETUP.md" },
+        { error: "Database not configured" },
         { status: 500 },
       );
     }
@@ -28,7 +27,6 @@ export async function POST(request: NextRequest) {
       data: {
         winner: body.winner,
         loser: body.loser,
-        moveCount: body.moveCount,
       },
     });
 
@@ -38,34 +36,6 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: `Failed to save game: ${message}` },
-      { status: 500 },
-    );
-  }
-}
-
-export async function GET() {
-  try {
-    const games = await prisma.game.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 100,
-    });
-
-    const gameRecords = games.map((game) => ({
-      id: game.id,
-      winner: game.winner,
-      loser: game.loser,
-      move_count: game.moveCount,
-      created_at: game.createdAt.toISOString(),
-    }));
-
-    return NextResponse.json(gameRecords);
-  } catch (error) {
-    console.error("Error fetching games:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: `Failed to fetch games: ${message}` },
       { status: 500 },
     );
   }
