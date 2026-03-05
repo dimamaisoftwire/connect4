@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Game {
+  id        Int     @id @default(autoincrement())
+  winner    Int     // 1 = Player 1, 2 = Player 2, 0 = Draw
+  loser     Int     // 1 = Player 1, 2 = Player 2, 0 = Draw
+  moveCount Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("games")
+}
