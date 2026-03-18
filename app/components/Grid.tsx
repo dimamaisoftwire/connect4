@@ -53,7 +53,7 @@ export default function Grid({ controller }: GridProps) {
           row.map((cell, colIndex) => (
             <button
               key={`${rowIndex}-${colIndex}`}
-              className="aspect-square w-10 h-10 border-1 border-white dark:border-gray-700 transition-colors"
+              className="aspect-square w-10 h-10 border-1 border-gray-300 dark:border-gray-700 transition-colors"
               onClick={() => handleColumnClick(colIndex)}
             >
               <div
