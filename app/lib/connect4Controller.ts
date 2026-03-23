@@ -75,10 +75,10 @@ export class Connect4Controller {
 
   private checkWin(row: number, col: number, player: Player): boolean {
     const directions = [
-      [[0, -1], [0, 1]], // Horizontal
-      [[-1, 0], [1, 0]], // Vertical
-      [[-1, -1], [1, 1]], // Diagonal \
-      [[-1, 1], [1, -1]], // Diagonal /
+      [[0, -1], [0, 1]],
+      [[-1, 0], [1, 0]], 
+      [[-1, -1], [1, 1]], 
+      [[-1, 1], [1, -1]], 
     ];
 
     for (const [dir1, dir2] of directions) {
