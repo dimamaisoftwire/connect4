@@ -81,24 +81,11 @@ export class Connect4Controller {
       [[-1, 1], [1, -1]], 
     ];
 
-    for (const [dir1, dir2] of directions) {
+    for (const [[dir1Row, dir1Col], [dir2Row, dir2Col]] of directions) {
+      
       let count = 1;
-
-      let currentRow = row + dir1[0];
-      let currentColumn = col + dir1[1];
-      while (this.board?.[currentRow]?.[currentColumn] === player) {
-        count++;
-        currentRow += dir1[0];
-        currentColumn += dir1[1];
-      }
-
-      currentRow = row + dir2[0];
-      currentColumn = col + dir2[1];
-      while (this.board?.[currentRow]?.[currentColumn] === player) {
-        count++;
-        currentRow += dir2[0];
-        currentColumn += dir2[1];
-      }
+      count += this.getNumberInDirection(row, col, [dir1Row, dir1Col], player);
+      count += this.getNumberInDirection(row, col, [dir2Row, dir2Col], player);
 
       if (count >= 4) {
         return true;
@@ -106,6 +93,18 @@ export class Connect4Controller {
     }
 
     return false;
+  }
+
+  private getNumberInDirection(row: number, col: number, direction: [number, number], player: Player): number {
+    let count = 0;
+    let currentRow = row + direction[0];
+    let currentColumn = col + direction[1];
+    while (this.board?.[currentRow]?.[currentColumn] === player) {
+      count++;
+      currentRow += direction[0];
+      currentColumn += direction[1];
+    }
+    return count;
   }
 
   private checkDraw(): boolean {
