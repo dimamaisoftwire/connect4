@@ -85,6 +85,11 @@ describe("Connect4Controller", () => {
       const controller = new Connect4Controller(7, 6);
       controller.newGame();
 
+      //
+      //
+      // Y Y Y 
+      // R R R R
+
       controller.makeMove(0);
       controller.makeMove(0);
       controller.makeMove(1);
@@ -100,7 +105,14 @@ describe("Connect4Controller", () => {
     it("should detect vertical win", () => {
       const controller = new Connect4Controller(7, 6);
       controller.newGame();
-
+      
+      //
+      //
+      // R
+      // R Y
+      // R Y
+      // R Y
+      
       controller.makeMove(0);
       controller.makeMove(1);
       controller.makeMove(0);
@@ -116,6 +128,13 @@ describe("Connect4Controller", () => {
     it("should detect diagonal win (up-right)", () => {
       const controller = new Connect4Controller(7, 6);
       controller.newGame();
+
+      //
+      //
+      //       R
+      //     R R
+      //   R R Y
+      // R Y Y Y   Y 
 
       controller.makeMove(0); 
       controller.makeMove(1);
@@ -136,6 +155,13 @@ describe("Connect4Controller", () => {
     it("should detect diagonal win (up-left)", () => {
       const controller = new Connect4Controller(7, 6);
       controller.newGame();
+
+      //
+      //
+      //     Y  
+      //     Y Y
+      //     R Y Y  
+      // R   R R R Y 
 
       controller.makeMove(0);
       controller.makeMove(6);

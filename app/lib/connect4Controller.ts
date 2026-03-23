@@ -44,9 +44,9 @@ export class Connect4Controller {
     }
 
     let row = -1;
-    for (let r = this.height - 1; r >= 0; r--) {
-      if (this.board[r][column] === 0) {
-        row = r;
+    for (let currentRow = this.height - 1; currentRow >= 0; currentRow--) {
+      if (this.board[currentRow][column] === 0) {
+        row = currentRow;
         break;
       }
     }
@@ -84,20 +84,20 @@ export class Connect4Controller {
     for (const [dir1, dir2] of directions) {
       let count = 1;
 
-      let r = row + dir1[0];
-      let c = col + dir1[1];
-      while (r >= 0 && r < this.height && c >= 0 && c < this.width && this.board[r][c] === player) {
+      let currentRow = row + dir1[0];
+      let currentColumn = col + dir1[1];
+      while (this.board?.[currentRow]?.[currentColumn] === player) {
         count++;
-        r += dir1[0];
-        c += dir1[1];
+        currentRow += dir1[0];
+        currentColumn += dir1[1];
       }
 
-      r = row + dir2[0];
-      c = col + dir2[1];
-      while (r >= 0 && r < this.height && c >= 0 && c < this.width && this.board[r][c] === player) {
+      currentRow = row + dir2[0];
+      currentColumn = col + dir2[1];
+      while (this.board?.[currentRow]?.[currentColumn] === player) {
         count++;
-        r += dir2[0];
-        c += dir2[1];
+        currentRow += dir2[0];
+        currentColumn += dir2[1];
       }
 
       if (count >= 4) {
@@ -109,11 +109,9 @@ export class Connect4Controller {
   }
 
   private checkDraw(): boolean {
-    for (let r = 0; r < this.height; r++) {
-      for (let c = 0; c < this.width; c++) {
-        if (this.board[r][c] === 0) {
-          return false;
-        }
+    for (let col = 0; col < this.width; col++) {
+      if (this.board[0][col] === 0) {
+        return false;
       }
     }
     return true;
