@@ -61,7 +61,6 @@ export class Connect4Controller {
     if (this.checkWin(row, column, player)) {
       this.gameState = "won";
       this.winner = player;
-      // hit the endpoint to save the game
       this.saveGame();
       return this.getStatus();
     }
