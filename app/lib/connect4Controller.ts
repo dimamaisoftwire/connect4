@@ -33,10 +33,25 @@ export class Connect4Controller {
   }
 
   public makeMove(column: number): GameStatus | null {
-    console.log("Dropping a token into a column:", column);
+    if (column < 0 || column >= this.width) {
+      return null;
+    }
 
-    // This method needs to be implemented!
-    this.board[0][column] = this.currentPlayer;
+    let row = -1;
+    for (let r = this.height - 1; r >= 0; r--) {
+      if (this.board[r][column] === 0) {
+        row = r;
+        break;
+      }
+    }
+
+    if (row === -1) {
+      return null;
+    }
+
+    this.board[row][column] = this.currentPlayer;
+
+    this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
 
     return this.getStatus();
   }
