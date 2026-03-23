@@ -14,6 +14,7 @@ export class Connect4Controller {
   private board: Player[][];
   private currentPlayer: Player = 1;
   private gameState: GameState = "idle";
+  private winner: Player = 0;
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -29,18 +30,23 @@ export class Connect4Controller {
     this.board = this.initializeBoard();
     this.currentPlayer = 1;
     this.gameState = "ongoing";
+    this.winner = 0;
     return this.getStatus();
   }
 
   public makeMove(column: number): GameStatus | null {
+    if (this.gameState !== "ongoing") {
+      return null;
+    }
+
     if (column < 0 || column >= this.width) {
       return null;
     }
 
     let row = -1;
-    for (let r = this.height - 1; r >= 0; r--) {
-      if (this.board[r][column] === 0) {
-        row = r;
+    for (let currentRow = this.height - 1; currentRow >= 0; currentRow--) {
+      if (this.board[currentRow][column] === 0) {
+        row = currentRow;
         break;
       }
     }
@@ -49,18 +55,72 @@ export class Connect4Controller {
       return null;
     }
 
-    this.board[row][column] = this.currentPlayer;
+    const player = this.currentPlayer;
+    this.board[row][column] = player;
+
+    if (this.checkWin(row, column, player)) {
+      this.gameState = "won";
+      this.winner = player;
+      return this.getStatus();
+    }
+
+    if (this.checkDraw()) {
+      this.gameState = "draw";
+      return this.getStatus();
+    }
 
     this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
-
     return this.getStatus();
+  }
+
+  private checkWin(row: number, col: number, player: Player): boolean {
+    const directions = [
+      [[0, -1], [0, 1]],
+      [[-1, 0], [1, 0]], 
+      [[-1, -1], [1, 1]], 
+      [[-1, 1], [1, -1]], 
+    ];
+
+    for (const [[dir1Row, dir1Col], [dir2Row, dir2Col]] of directions) {
+      
+      let count = 1;
+      count += this.getNumberInDirection(row, col, [dir1Row, dir1Col], player);
+      count += this.getNumberInDirection(row, col, [dir2Row, dir2Col], player);
+
+      if (count >= 4) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private getNumberInDirection(row: number, col: number, direction: [number, number], player: Player): number {
+    let count = 0;
+    let currentRow = row + direction[0];
+    let currentColumn = col + direction[1];
+    while (this.board?.[currentRow]?.[currentColumn] === player) {
+      count++;
+      currentRow += direction[0];
+      currentColumn += direction[1];
+    }
+    return count;
+  }
+
+  private checkDraw(): boolean {
+    for (let col = 0; col < this.width; col++) {
+      if (this.board[0][col] === 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public getStatus(): GameStatus {
     return {
       board: this.board,
       state: this.gameState,
-      winner: this.gameState === "won" ? this.currentPlayer : undefined,
+      winner: this.winner,
       currentPlayer: this.currentPlayer,
     };
   }
