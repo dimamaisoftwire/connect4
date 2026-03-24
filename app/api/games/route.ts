@@ -20,11 +20,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const outcomeValue = body.outcome === "DRAW" ? 0 : body.outcome;
-
     const game = await prisma.game.create({
       data: {
-        outcome: outcomeValue,
+        outcome: body.outcome,
         player1: body.player1,
         player2: body.player2,
       },
