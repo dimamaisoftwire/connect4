@@ -22,9 +22,3 @@ export function formatDate(date: Date): string {
     minute: "2-digit",
   });
 }
-
-export function getOutcomeColorClass(outcome: number): string {
-  if (outcome === 1) return "text-blue-600 dark:text-blue-400";
-  if (outcome === 2) return "text-red-600 dark:text-red-400";
-  return "text-zinc-600 dark:text-zinc-400";
-}
