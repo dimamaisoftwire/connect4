@@ -1,6 +1,6 @@
 import { prisma } from "@/app/lib/prisma";
 import Link from "next/link";
-import { Game } from "./lib/gameUtils";
+import { Game } from "./types";
 import { StatsSummary } from "./components/StatsSummary";
 import { GamesTable } from "./components/GamesTable";
 

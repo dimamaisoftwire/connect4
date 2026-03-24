@@ -1,11 +1,3 @@
-export interface Game {
-  id: number;
-  outcome: number;
-  player1: number;
-  player2: number;
-  createdAt: Date;
-}
-
 export function formatOutcome(outcome: number): string {
   if (outcome === 0) return "Draw";
   if (outcome === 1) return "Player 1 Wins";
