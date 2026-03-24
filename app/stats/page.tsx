@@ -4,6 +4,8 @@ import { Game } from "./types";
 import { StatsSummary } from "./components/StatsSummary";
 import { GamesTable } from "./components/GamesTable";
 
+export const dynamic = "force-dynamic";
+
 function calculateStats(games: Game[]) {
   const player1Wins = games.filter((g) => g.outcome === 1).length;
   const player2Wins = games.filter((g) => g.outcome === 2).length;
