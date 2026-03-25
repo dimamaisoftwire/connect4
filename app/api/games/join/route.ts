@@ -1,73 +1,64 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { redis } from "@/app/lib/redis";
-import {
-  generateSecret,
-  hashSecret
-} from "@/app/lib/gameUtils";
+import { generateSecret, hashSecret } from "@/app/lib/gameUtils";
 import { RedisGameData } from "@/app/lib/types";
+import { errorResponse, successResponse, fetchGame, publishUpdate, gameKey } from "../_utils";
+
+interface JoinRequest {
+  gameId: string;
+}
+
+async function parseRequest(request: NextRequest): Promise<JoinRequest | null> {
+  try {
+    const body = await request.json();
+    if (!body.gameId) {
+      return null;
+    }
+    return { gameId: body.gameId };
+  } catch {
+    return null;
+  }
+}
+
+async function addPlayerToGame(gameData: RedisGameData): Promise<{ secret: string; id: string }> {
+  const secret = generateSecret();
+  const id = await hashSecret(secret);
+  gameData.player2Id = id;
+  gameData.gameStatus.state = "ongoing";
+  return { secret, id };
+}
+
+async function updateGame(key: string, gameData: RedisGameData) {
+  await redis.set(key, JSON.stringify(gameData));
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { gameId } = body;
-
-    if (!gameId) {
-      return NextResponse.json(
-        { error: "Missing gameId" },
-        { status: 400 },
-      );
+    const params = await parseRequest(request);
+    if (!params) {
+      return errorResponse("Missing gameId", 400);
     }
 
-    const gameKey = `game:${gameId}`;
-    const gameDataRaw = await redis.get(gameKey);
+    const { gameId } = params;
+    const key = gameKey(gameId);
 
-    if (!gameDataRaw) {
-      return NextResponse.json(
-        { error: "Game not found" },
-        { status: 404 },
-      );
+    const gameData = await fetchGame(key);
+    if (!gameData) {
+      return errorResponse("Game not found", 404);
     }
-
-    const gameData: RedisGameData = JSON.parse(gameDataRaw);
 
     if (gameData.player2Id !== null) {
-      return NextResponse.json(
-        { error: "Game is full" },
-        { status: 409 },
-      );
+      return errorResponse("Game is full", 409);
     }
 
-    const playerSecret = generateSecret();
-    const playerId = await hashSecret(playerSecret);
+    const { secret } = await addPlayerToGame(gameData);
+    await updateGame(key, gameData);
+    await publishUpdate(gameId, "playerJoined", { gameStatus: gameData.gameStatus });
 
-    gameData.player2Id = playerId;
-    gameData.gameStatus.state = "ongoing";
-
-    await redis.set(gameKey, JSON.stringify(gameData));
-
-    // Publish update for SSE subscribers
-    await redis.publish(
-      `game:${gameId}:updates`,
-      JSON.stringify({
-        type: "playerJoined",
-        gameStatus: gameData.gameStatus,
-      }),
-    );
-
-    return NextResponse.json(
-      {
-        gameId,
-        playerSecret,
-        playerNumber: 2,
-      },
-      { status: 200 },
-    );
+    return successResponse({ gameId, playerSecret: secret, playerNumber: 2 });
   } catch (error) {
     console.error("Error joining game:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: `Failed to join game: ${message}` },
-      { status: 500 },
-    );
+    return errorResponse(`Failed to join game: ${message}`, 500);
   }
 }
