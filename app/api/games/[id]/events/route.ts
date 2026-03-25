@@ -11,23 +11,23 @@ function createSseMessage(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-function setupSubscription(
+async function setupSubscription(
   controller: ReadableStreamDefaultController,
   channel: string,
   encoder: TextEncoder,
 ) {
   const subscriber = redis.duplicate();
-  subscriber.connect().then(() => {
-    subscriber.subscribe(channel, (message) => {
-      controller.enqueue(encoder.encode(createSseMessage(message)));
-    });
+  await subscriber.connect();
+  await subscriber.subscribe(channel, (message) => {
+    const parsed = JSON.parse(message);
+    controller.enqueue(encoder.encode(createSseMessage(parsed)));
   });
   return subscriber;
 }
 
 function handleDisconnect(
   request: NextRequest,
-  subscriber: ReturnType<typeof redis.duplicate>,
+  subscriber: Awaited<ReturnType<typeof setupSubscription>>,
   channel: string,
   controller: ReadableStreamDefaultController,
 ) {
@@ -45,12 +45,12 @@ function createEventStream(
   const encoder = new TextEncoder();
 
   return new ReadableStream({
-    start(controller) {
+    async start(controller) {
       controller.enqueue(
         encoder.encode(createSseMessage({ type: "connected" })),
       );
 
-      const subscriber = setupSubscription(controller, channel, encoder);
+      const subscriber = await setupSubscription(controller, channel, encoder);
       handleDisconnect(request, subscriber, channel, controller);
     },
   });
