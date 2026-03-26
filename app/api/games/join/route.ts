@@ -1,8 +1,7 @@
-import { NextRequest } from "next/server";
-import { redis } from "@/app/lib/redis";
-import { generateSecret, hashSecret } from "@/app/lib/gameUtils";
+import { NextRequest, NextResponse } from "next/server";
+import { redis, fetchGame, publishGameUpdate, buildGameKey } from "@/app/lib/redis";
+import { generateSecret, hashSecret } from "@/app/lib/playerAuth";
 import { RedisGameData } from "@/app/lib/types";
-import { errorResponse, successResponse, fetchGame, publishUpdate, gameKey } from "../_utils";
 
 interface JoinRequest {
   gameId: string;
@@ -36,29 +35,29 @@ export async function POST(request: NextRequest) {
   try {
     const params = await parseRequest(request);
     if (!params) {
-      return errorResponse("Missing gameId", 400);
+      return NextResponse.json({ error: "Missing gameId" }, { status: 400 });
     }
 
     const { gameId } = params;
-    const key = gameKey(gameId);
+    const key = buildGameKey(gameId);
 
     const gameData = await fetchGame(key);
     if (!gameData) {
-      return errorResponse("Game not found", 404);
+      return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
 
     if (gameData.player2Id !== null) {
-      return errorResponse("Game is full", 409);
+      return NextResponse.json({ error: "Game is full" }, { status: 409 });
     }
 
     const { secret } = await addPlayerToGame(gameData);
     await updateGame(key, gameData);
-    await publishUpdate(gameId, "playerJoined", { gameStatus: gameData.gameStatus });
+    await publishGameUpdate(gameId, "playerJoined", { gameStatus: gameData.gameStatus });
 
-    return successResponse({ gameId, playerSecret: secret, playerNumber: 2 });
+    return NextResponse.json({ gameId, playerSecret: secret, playerNumber: 2 });
   } catch (error) {
     console.error("Error joining game:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return errorResponse(`Failed to join game: ${message}`, 500);
+    return NextResponse.json({ error: `Failed to join game: ${message}` }, { status: 500 });
   }
 }

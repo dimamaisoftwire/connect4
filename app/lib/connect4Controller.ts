@@ -3,7 +3,7 @@ import {
   initializeBoard,
   getLowestEmptyRow,
   calculateMoveResult,
-} from "./gameUtils";
+} from "./gameLogic";
 
 export class Connect4Controller {
   public width: number;

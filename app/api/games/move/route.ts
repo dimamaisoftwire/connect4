@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { redis } from "@/app/lib/redis";
+import { redis, fetchGameWithUnwatch, publishGameUpdate, buildGameKey } from "@/app/lib/redis";
 import { prisma } from "@/app/lib/prisma";
-import { verifyPlayer, makeMove } from "@/app/lib/gameUtils";
+import { verifyPlayer } from "@/app/lib/playerAuth";
+import { makeMove } from "@/app/lib/gameLogic";
 import { RedisGameData } from "@/app/lib/types";
-import { errorResponse, successResponse, fetchGameWithUnwatch, publishUpdate, gameKey } from "../_utils";
 
 const CONCURRENT_ERROR = "Concurrent modification detected, retry";
 
@@ -33,7 +33,7 @@ async function acquireLock(key: string): Promise<boolean> {
 async function verifyTurn(
   gameData: RedisGameData,
   secret: string,
-): Promise<{ valid: false; response: NextResponse } | { valid: true; playerNumber: 1 | 2 }> {
+): Promise<{ valid: false; response: Response } | { valid: true; playerNumber: 1 | 2 }> {
   const { isValid, playerNumber } = await verifyPlayer(
     secret,
     gameData.player1Id,
@@ -42,12 +42,12 @@ async function verifyTurn(
 
   if (!isValid || !playerNumber) {
     await redis.unwatch();
-    return { valid: false, response: errorResponse("Invalid player secret", 403) };
+    return { valid: false, response: NextResponse.json({ error: "Invalid player secret" }, { status: 403 }) };
   }
 
   if (gameData.gameStatus.currentPlayer !== playerNumber) {
     await redis.unwatch();
-    return { valid: false, response: errorResponse("Not your turn", 403) };
+    return { valid: false, response: NextResponse.json({ error: "Not your turn" }, { status: 403 }) };
   }
 
   return { valid: true, playerNumber };
@@ -56,12 +56,12 @@ async function verifyTurn(
 async function executeMove(
   gameData: RedisGameData,
   column: number,
-): Promise<{ success: false; response: NextResponse } | { success: true; newStatus: RedisGameData; outcome?: number }> {
+): Promise<{ success: false; response: Response } | { success: true; newStatus: RedisGameData; outcome?: number }> {
   const result = makeMove(gameData.gameStatus, column);
 
   if (!result.success || !result.newStatus) {
     await redis.unwatch();
-    return { success: false, response: errorResponse("Invalid move", 400) };
+    return { success: false, response: NextResponse.json({ error: "Invalid move" }, { status: 400 }) };
   }
 
   gameData.gameStatus = result.newStatus;
@@ -74,14 +74,14 @@ async function saveOngoingGame(key: string, gameData: RedisGameData, gameId: str
   const execResult = await multi.exec();
 
   if (!execResult) {
-    return { success: false, response: errorResponse(CONCURRENT_ERROR, 409) };
+    return { success: false, response: NextResponse.json({ error: CONCURRENT_ERROR }, { status: 409 }) };
   }
 
-  await publishUpdate(gameId, "moveMade", { gameStatus: gameData.gameStatus });
+  await publishGameUpdate(gameId, "moveMade", { gameStatus: gameData.gameStatus });
 
   return {
     success: true,
-    response: successResponse({ success: true, gameStatus: gameData.gameStatus, gameOver: false }),
+    response: NextResponse.json({ success: true, gameStatus: gameData.gameStatus, gameOver: false }),
   };
 }
 
@@ -96,38 +96,38 @@ async function saveFinishedGame(
   const execResult = await multi.exec();
 
   if (!execResult) {
-    return { success: false, response: errorResponse(CONCURRENT_ERROR, 409) };
+    return { success: false, response: NextResponse.json({ error: CONCURRENT_ERROR }, { status: 409 }) };
   }
 
   await prisma.game.create({
     data: { outcome, player1: 1, player2: 2 },
   });
 
-  await publishUpdate(gameId, "gameOver", { gameStatus: gameData.gameStatus, outcome });
+  await publishGameUpdate(gameId, "gameOver", { gameStatus: gameData.gameStatus, outcome });
 
   return {
     success: true,
-    response: successResponse({ success: true, gameStatus: gameData.gameStatus, gameOver: true }),
+    response: NextResponse.json({ success: true, gameStatus: gameData.gameStatus, gameOver: true }),
   };
 }
 
 export async function POST(request: NextRequest) {
   const params = await parseRequest(request);
   if (!params) {
-    return errorResponse("Missing required fields", 400);
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
   const { gameId, secret, column } = params;
-  const key = gameKey(gameId);
+  const key = buildGameKey(gameId);
 
   const lockAcquired = await acquireLock(key);
   if (!lockAcquired) {
-    return errorResponse(CONCURRENT_ERROR, 409);
+    return NextResponse.json({ error: CONCURRENT_ERROR }, { status: 409 });
   }
 
   const gameData = await fetchGameWithUnwatch(key);
   if (!gameData) {
-    return errorResponse("Game not found", 404);
+    return NextResponse.json({ error: "Game not found" }, { status: 404 });
   }
 
   const turnCheck = await verifyTurn(gameData, secret);

@@ -1,9 +1,9 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { redis } from "@/app/lib/redis";
-import { generateSecret, hashSecret, initializeBoard } from "@/app/lib/gameUtils";
+import { redis, buildGameKey } from "@/app/lib/redis";
+import { generateSecret, hashSecret } from "@/app/lib/playerAuth";
+import { initializeBoard } from "@/app/lib/gameLogic";
 import { RedisGameData } from "@/app/lib/types";
-import { errorResponse, successResponse, gameKey } from "../_utils";
 
 const GAME_TTL_SECONDS = 24 * 60 * 60;
 
@@ -35,11 +35,11 @@ async function saveGame(key: string, gameData: RedisGameData) {
 
 export async function POST(request: NextRequest) {
   if (!checkRedisConfig()) {
-    return errorResponse("Redis not configured", 500);
+    return NextResponse.json({ error: "Redis not configured" }, { status: 500 });
   }
 
   const { gameData, gameId, playerSecret } = await createGameData();
-  await saveGame(gameKey(gameId), gameData);
+  await saveGame(buildGameKey(gameId), gameData);
 
-  return successResponse({ gameId, playerSecret, playerNumber: 1 }, 201);
+  return NextResponse.json({ gameId, playerSecret, playerNumber: 1 }, { status: 201 });
 }
