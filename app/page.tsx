@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Grid from "./components/Grid";
 import { Connect4Controller } from "./lib/connect4Controller";
+import { MultiplayerLobby } from "./components/MultiplayerLobby";
 
 export default function Home() {
   const controller = new Connect4Controller(7, 6);
@@ -17,6 +18,7 @@ export default function Home() {
           <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
             A simple Connect 4 game
           </p>
+          <MultiplayerLobby />
           <Link
             href="/stats"
             className="text-blue-500 hover:text-blue-600 text-sm"

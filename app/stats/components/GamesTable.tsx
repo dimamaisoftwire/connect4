@@ -1,5 +1,5 @@
 import { Game } from "../types";
-import { formatOutcome, formatDate } from "../lib/gameUtils";
+import { formatOutcome, formatDate } from "../lib/formatters";
 
 interface GameRowProps {
   game: Game;
