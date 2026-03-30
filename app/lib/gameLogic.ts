@@ -58,7 +58,10 @@ export function getLowestEmptyRow(board: Player[][], col: number): number {
 }
 
 export function isValidMove(board: Player[][], column: number): boolean {
-  return column >= 0 && column < board[0].length && board[0][column] === 0;
+  if (column < 0 || column >= board[0].length) {
+    return false;
+  }
+  return board[0][column] === 0;
 }
 
 export function calculateMoveResult(
@@ -107,14 +110,11 @@ export function makeMove(
   gameStatus: GameStatus,
   column: number,
 ): { success: boolean; newStatus: GameStatus | null; outcome?: 0 | 1 | 2 } {
-  if (column < 0 || column >= gameStatus.board[0].length) {
+  if (!isValidMove(gameStatus.board, column)) {
     return { success: false, newStatus: null };
   }
 
   const row = getLowestEmptyRow(gameStatus.board, column);
-  if (row === -1) {
-    return { success: false, newStatus: null };
-  }
 
   const result = calculateMoveResult(gameStatus, row, column);
   return { success: true, ...result };

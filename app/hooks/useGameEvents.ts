@@ -1,48 +1,29 @@
-import { useEffect } from "react";
 import { GameStatus } from "@/app/lib/types";
-import { GameCredentials } from "@/app/lib/gameCredentials";
 
 interface GameEvent {
   type: string;
   gameStatus: GameStatus;
 }
 
-interface UseGameEventsOptions {
-  gameId: string;
-  credentials: GameCredentials | null;
-  onStateUpdate: (gameStatus: GameStatus, isMyTurn: boolean) => void;
-  onGameOver: (gameStatus: GameStatus) => void;
-}
+export function registerGameSSE(
+  gameId: string,
+  onStateUpdate: (gameStatus: GameStatus) => void,
+): () => void {
+  const eventSource = new EventSource(`/api/games/${gameId}/events`);
 
-function isMyTurn(gameStatus: GameStatus, credentials: GameCredentials | null): boolean {
-  return credentials !== null && gameStatus.currentPlayer === credentials.playerNumber;
-}
+  eventSource.onmessage = (event) => {
+    const data: GameEvent = JSON.parse(event.data);
 
-export function useGameEvents({ gameId, credentials, onStateUpdate, onGameOver }: UseGameEventsOptions) {
-  useEffect(() => {
-    if (!gameId) return;
+    if (data.type === "playerJoined" || data.type === "moveMade" || data.type === "gameOver") {
+      onStateUpdate(data.gameStatus);
+    }
+  };
 
-    const eventSource = new EventSource(`/api/games/${gameId}/events`);
+  eventSource.onerror = () => {
+    console.error("SSE connection error");
+  };
 
-    eventSource.onmessage = (event) => {
-      const data: GameEvent = JSON.parse(event.data);
-
-      if (data.type === "playerJoined" || data.type === "moveMade") {
-        onStateUpdate(data.gameStatus, isMyTurn(data.gameStatus, credentials));
-      }
-
-      if (data.type === "gameOver") {
-        onGameOver(data.gameStatus);
-        eventSource.close();
-      }
-    };
-
-    eventSource.onerror = () => {
-      console.error("SSE connection error");
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [gameId, credentials, onStateUpdate, onGameOver]);
+  return () => {
+    eventSource.close();
+  };
 }

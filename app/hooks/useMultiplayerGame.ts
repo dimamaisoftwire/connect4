@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { GameStatus } from "@/app/lib/types";
 import { GameCredentials, loadCredentials } from "@/app/lib/gameCredentials";
-import { useGameEvents } from "./useGameEvents";
+import { registerGameSSE } from "./useGameEvents";
 
 async function fetchInitialState(gameId: string): Promise<GameStatus | null> {
   try {
@@ -32,16 +32,16 @@ async function submitMove(gameId: string, secret: string, column: number) {
   return response.json();
 }
 
-function isGameFinished(state: string): boolean {
-  return state === "won" || state === "draw";
-}
 
 export function useMultiplayerGame(gameId: string) {
   const [credentials, setCredentials] = useState<GameCredentials | null>(null);
   const [gameStatus, setGameStatus] = useState<GameStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isMyTurn, setIsMyTurn] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
+
+  const isMyTurn = credentials !== null && gameStatus !== null
+    && gameStatus.currentPlayer === credentials.playerNumber;
+  const gameOver = gameStatus !== null
+    && (gameStatus.state === "won" || gameStatus.state === "draw");
 
   useEffect(() => {
     const stored = loadCredentials(gameId);
@@ -53,30 +53,14 @@ export function useMultiplayerGame(gameId: string) {
   }, [gameId]);
 
   useEffect(() => {
-    if (!credentials) return;
+    if (!gameId || !credentials) return;
 
     fetchInitialState(gameId).then((status) => {
-      if (!status) return;
-      setGameStatus(status);
-      setIsMyTurn(status.currentPlayer === credentials.playerNumber);
-      setGameOver(isGameFinished(status.state));
+      if (status) setGameStatus(status);
     });
-  }, [credentials, gameId]);
 
-  const onStateUpdate = useCallback(
-    (status: GameStatus, myTurn: boolean) => {
-      setGameStatus(status);
-      setIsMyTurn(myTurn);
-    },
-    [],
-  );
-
-  const onGameOver = useCallback((status: GameStatus) => {
-    setGameStatus(status);
-    setGameOver(true);
-  }, []);
-
-  useGameEvents({ gameId, credentials, onStateUpdate, onGameOver });
+    return registerGameSSE(gameId, setGameStatus);
+  }, [gameId, credentials]);
 
   const handleColumnClick = useCallback(
     async (column: number) => {
@@ -86,10 +70,6 @@ export function useMultiplayerGame(gameId: string) {
       if (!result) return;
 
       setGameStatus(result.gameStatus);
-      setIsMyTurn(result.gameStatus.currentPlayer === credentials.playerNumber);
-      if (result.gameOver) {
-        setGameOver(true);
-      }
     },
     [credentials, gameId, isMyTurn, gameOver],
   );

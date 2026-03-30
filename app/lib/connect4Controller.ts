@@ -1,4 +1,4 @@
-import { GameStatus, Player } from "./types";
+import { GameStatus, GameState, Player } from "./types";
 import {
   initializeBoard,
   getLowestEmptyRow,
@@ -10,7 +10,7 @@ export class Connect4Controller {
   private height: number;
   private board: Player[][];
   private currentPlayer: Player = 1;
-  private gameState: GameStatus["state"] = "idle";
+  private gameState: GameState = "idle";
   private winner: Player = 0;
 
   constructor(width: number, height: number) {

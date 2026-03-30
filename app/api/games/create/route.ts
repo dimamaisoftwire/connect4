@@ -7,10 +7,6 @@ import { RedisGameData } from "@/app/lib/types";
 
 const GAME_TTL_SECONDS = 24 * 60 * 60;
 
-function checkRedisConfig(): boolean {
-  return !!process.env.REDIS_URL;
-}
-
 async function createGameData(): Promise<{ gameData: RedisGameData; gameId: string; playerSecret: string }> {
   const gameId = nanoid(10);
   const playerSecret = generateSecret();
@@ -29,17 +25,14 @@ async function createGameData(): Promise<{ gameData: RedisGameData; gameId: stri
   return { gameData, gameId, playerSecret };
 }
 
-async function saveGame(key: string, gameData: RedisGameData) {
-  await redis.setEx(key, GAME_TTL_SECONDS, JSON.stringify(gameData));
-}
-
 export async function POST(request: NextRequest) {
-  if (!checkRedisConfig()) {
+  if (!process.env.REDIS_URL) {
     return NextResponse.json({ error: "Redis not configured" }, { status: 500 });
   }
 
   const { gameData, gameId, playerSecret } = await createGameData();
-  await saveGame(buildGameKey(gameId), gameData);
+
+  await redis.setEx(buildGameKey(gameId), GAME_TTL_SECONDS, JSON.stringify(gameData));
 
   return NextResponse.json({ gameId, playerSecret, playerNumber: 1 }, { status: 201 });
 }

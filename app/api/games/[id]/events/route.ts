@@ -11,47 +11,39 @@ function createSseMessage(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-async function setupSubscription(
-  controller: ReadableStreamDefaultController,
-  channel: string,
-  encoder: TextEncoder,
-) {
-  const subscriber = redis.duplicate();
-  await subscriber.connect();
-  await subscriber.subscribe(channel, (message) => {
-    const parsed = JSON.parse(message);
-    controller.enqueue(encoder.encode(createSseMessage(parsed)));
-  });
-  return subscriber;
-}
-
-function handleDisconnect(
-  request: NextRequest,
-  subscriber: Awaited<ReturnType<typeof setupSubscription>>,
-  channel: string,
-  controller: ReadableStreamDefaultController,
-) {
-  request.signal.addEventListener("abort", () => {
-    subscriber.unsubscribe(channel).catch(console.error);
-    subscriber.quit().catch(console.error);
-    controller.close();
-  });
-}
-
 function createEventStream(
   request: NextRequest,
   channel: string,
 ): ReadableStream {
   const encoder = new TextEncoder();
+  let closed = false;
+
+  function safeEnqueue(controller: ReadableStreamDefaultController, data: Uint8Array) {
+    if (closed) return;
+    try {
+      controller.enqueue(data);
+    } catch {
+      closed = true;
+    }
+  }
 
   return new ReadableStream({
     async start(controller) {
-      controller.enqueue(
-        encoder.encode(createSseMessage({ type: "connected" })),
-      );
+      safeEnqueue(controller, encoder.encode(createSseMessage({ type: "connected" })));
 
-      const subscriber = await setupSubscription(controller, channel, encoder);
-      handleDisconnect(request, subscriber, channel, controller);
+      const subscriber = redis.duplicate();
+      await subscriber.connect();
+      await subscriber.subscribe(channel, (message) => {
+        const parsed = JSON.parse(message);
+        safeEnqueue(controller, encoder.encode(createSseMessage(parsed)));
+      });
+
+      request.signal.addEventListener("abort", () => {
+        closed = true;
+        subscriber.unsubscribe(channel).catch(console.error);
+        subscriber.quit().catch(console.error);
+        controller.close();
+      });
     },
   });
 }
