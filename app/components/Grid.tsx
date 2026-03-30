@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Connect4Controller, GameStatus } from "../lib/connect4Controller";
+import { Connect4Controller } from "../lib/connect4Controller";
+import { GameStatus } from "../lib/types";
 import ResetButton from "./ResetButton";
-
-type GridProps = {
-  controller: Connect4Controller;
-};
 
 const PIECE_COLOURS = {
   0: "transparent",
@@ -14,20 +11,27 @@ const PIECE_COLOURS = {
   2: "rgb(234, 179, 8)",
 };
 
-export default function Grid({ controller }: GridProps) {
-  const [gameStatus, setGameStatus] = useState<GameStatus>(() =>
-    controller.newGame(),
-  );
+type GridProps = {
+  controller: Connect4Controller;
+};
 
-  const handleColumnClick = (column: number) => {
-    if (gameStatus.state !== "ongoing") return;
+type GameBoardProps = {
+  gameStatus: GameStatus;
+  onColumnClick: (column: number) => void;
+  disabled?: boolean;
+  showReset?: boolean;
+  onReset?: () => void;
+  width?: number;
+};
 
-    const newStatus = controller.makeMove(column);
-    if (newStatus) {
-      setGameStatus(newStatus);
-    }
-  };
-
+export function GameBoard({
+  gameStatus,
+  onColumnClick,
+  disabled = false,
+  showReset = false,
+  onReset,
+  width = 7,
+}: GameBoardProps) {
   const getStatusMessage = () => {
     switch (gameStatus.state) {
       case "idle":
@@ -47,7 +51,7 @@ export default function Grid({ controller }: GridProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${controller.width}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`,
         }}
       >
         {gameStatus.board.map((row, rowIndex) =>
@@ -55,7 +59,8 @@ export default function Grid({ controller }: GridProps) {
             <button
               key={`${rowIndex}-${colIndex}`}
               className="aspect-square w-10 h-10 border-1 border-gray-300 dark:border-gray-700 transition-colors"
-              onClick={() => handleColumnClick(colIndex)}
+              onClick={() => onColumnClick(colIndex)}
+              disabled={disabled || gameStatus.state !== "ongoing"}
             >
               <div
                 className="w-full h-full rounded-full"
@@ -67,7 +72,32 @@ export default function Grid({ controller }: GridProps) {
           )),
         )}
       </div>
-      <ResetButton onReset={() => setGameStatus(controller.newGame())} />
+      {showReset && onReset && <ResetButton onReset={onReset} />}
     </div>
+  );
+}
+
+export default function Grid({ controller }: GridProps) {
+  const [gameStatus, setGameStatus] = useState<GameStatus>(() =>
+    controller.newGame(),
+  );
+
+  const handleColumnClick = (column: number) => {
+    if (gameStatus.state !== "ongoing") return;
+
+    const newStatus = controller.makeMove(column);
+    if (newStatus) {
+      setGameStatus(newStatus);
+    }
+  };
+
+  return (
+    <GameBoard
+      gameStatus={gameStatus}
+      onColumnClick={handleColumnClick}
+      showReset={true}
+      onReset={() => setGameStatus(controller.newGame())}
+      width={controller.width}
+    />
   );
 }

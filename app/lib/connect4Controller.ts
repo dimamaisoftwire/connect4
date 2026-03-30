@@ -1,12 +1,8 @@
-export type GameState = "ongoing" | "won" | "draw" | "idle";
-export type Player = 0 | 1 | 2; // 0 = empty, 1 = player 1, 2 = player 2
-
-export interface GameStatus {
-  state: GameState;
-  winner?: Player;
-  currentPlayer: Player;
-  board: Player[][];
-}
+import { GameStatus, GameState, Player } from "./types";
+import {
+  initializeBoard,
+  makeMove as gameMakeMove,
+} from "./gameLogic";
 
 export class Connect4Controller {
   public width: number;
@@ -19,15 +15,11 @@ export class Connect4Controller {
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
-    this.board = this.initializeBoard();
-  }
-
-  private initializeBoard(): Player[][] {
-    return Array.from({ length: this.height }, () => Array(this.width).fill(0));
+    this.board = initializeBoard(width, height);
   }
 
   public newGame(): GameStatus {
-    this.board = this.initializeBoard();
+    this.board = initializeBoard(this.width, this.height);
     this.currentPlayer = 1;
     this.gameState = "ongoing";
     this.winner = 0;
@@ -39,101 +31,34 @@ export class Connect4Controller {
       return null;
     }
 
-    if (column < 0 || column >= this.width) {
+    const result = gameMakeMove(this.getStatus(), column);
+    if (!result.success || !result.newStatus) {
       return null;
     }
 
-    let row = -1;
-    for (let currentRow = this.height - 1; currentRow >= 0; currentRow--) {
-      if (this.board[currentRow][column] === 0) {
-        row = currentRow;
-        break;
-      }
-    }
+    this.board = result.newStatus.board;
+    this.gameState = result.newStatus.state;
+    this.currentPlayer = result.newStatus.currentPlayer;
+    this.winner = result.newStatus.winner ?? 0;
 
-    if (row === -1) {
-      return null;
-    }
-
-    const player = this.currentPlayer;
-    this.board[row][column] = player;
-
-    if (this.checkWin(row, column, player)) {
-      this.gameState = "won";
-      this.winner = player;
+    if (result.outcome !== undefined) {
       this.saveGame();
-      return this.getStatus();
     }
 
-    if (this.checkDraw()) {
-      this.gameState = "draw";
-      return this.getStatus();
-    }
-
-    this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
     return this.getStatus();
-  }
-
-  private checkWin(row: number, col: number, player: Player): boolean {
-    const directions = [
-      [[0, -1], [0, 1]],
-      [[-1, 0], [1, 0]], 
-      [[-1, -1], [1, 1]], 
-      [[-1, 1], [1, -1]], 
-    ];
-
-    for (const [[dir1Row, dir1Col], [dir2Row, dir2Col]] of directions) {
-      
-      let count = 1;
-      count += this.getNumberInDirection(row, col, [dir1Row, dir1Col], player);
-      count += this.getNumberInDirection(row, col, [dir2Row, dir2Col], player);
-
-      if (count >= 4) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  private getNumberInDirection(row: number, col: number, direction: [number, number], player: Player): number {
-    let count = 0;
-    let currentRow = row + direction[0];
-    let currentColumn = col + direction[1];
-    while (this.board?.[currentRow]?.[currentColumn] === player) {
-      count++;
-      currentRow += direction[0];
-      currentColumn += direction[1];
-    }
-    return count;
-  }
-
-  private checkDraw(): boolean {
-    for (let col = 0; col < this.width; col++) {
-      if (this.board[0][col] === 0) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private async saveGame() {
     if (this.winner === 0 && this.gameState !== "draw") return;
 
-    const outcome: "DRAW" | 1 | 2 = this.gameState === "draw" ? "DRAW" : (this.winner as 1 | 2);
+    const outcome: 0 | 1 | 2 = this.gameState === "draw" ? 0 : (this.winner as 1 | 2);
 
-    await this.postGameResult(outcome);
-  }
-
-  private async postGameResult(
-    outcome: "DRAW" | 1 | 2,
-  ) {
     try {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          outcome,
+          outcome: outcome,
           player1: 1,
           player2: 2,
         }),
@@ -156,3 +81,5 @@ export class Connect4Controller {
     };
   }
 }
+
+export type { GameStatus, Player };

@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const body: GameSubmission = await request.json();
 
-    if (!body.outcome || body.player1 === undefined || body.player2 === undefined) {
+    if (body.outcome === undefined || body.player1 === undefined || body.player2 === undefined) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
