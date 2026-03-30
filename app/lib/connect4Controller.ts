@@ -1,8 +1,7 @@
 import { GameStatus, GameState, Player } from "./types";
 import {
   initializeBoard,
-  getLowestEmptyRow,
-  calculateMoveResult,
+  makeMove as gameMakeMove,
 } from "./gameLogic";
 
 export class Connect4Controller {
@@ -32,29 +31,18 @@ export class Connect4Controller {
       return null;
     }
 
-    const row = getLowestEmptyRow(this.board, column);
-    if (row === -1) {
+    const result = gameMakeMove(this.getStatus(), column);
+    if (!result.success || !result.newStatus) {
       return null;
     }
 
-    const result = calculateMoveResult(
-      {
-        board: this.board,
-        state: this.gameState,
-        currentPlayer: this.currentPlayer,
-      },
-      row,
-      column,
-    );
-
     this.board = result.newStatus.board;
     this.gameState = result.newStatus.state;
+    this.currentPlayer = result.newStatus.currentPlayer;
     this.winner = result.newStatus.winner ?? 0;
 
     if (result.outcome !== undefined) {
       this.saveGame();
-    } else {
-      this.currentPlayer = result.newStatus.currentPlayer;
     }
 
     return this.getStatus();
